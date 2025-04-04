@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -31,6 +31,27 @@ export const userScores = pgTable("user_scores", {
   level: integer("level").notNull().default(1),
 });
 
+// New tables for vocabulary lists functionality
+export const vocabularyLists = pgTable("vocabulary_lists", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description"), // can be null
+  languageId: integer("language_id").notNull(),
+  createdAt: text("created_at").notNull(),
+  updatedAt: text("updated_at").notNull(),
+  icon: text("icon").default("folder"), // Material icon name
+  color: text("color").default("#8F87F1"),
+});
+
+export const vocabularyListWords = pgTable("vocabulary_list_words", {
+  id: serial("id").primaryKey(),
+  listId: integer("list_id").notNull(),
+  wordId: integer("word_id").notNull(), // References learnedWords.id
+  addedAt: text("added_at").notNull(),
+  notes: text("notes"), // can be null
+});
+
 // Types and schemas
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
@@ -57,6 +78,24 @@ export const insertUserScoreSchema = createInsertSchema(userScores).pick({
   level: true,
 });
 
+export const insertVocabularyListSchema = createInsertSchema(vocabularyLists).pick({
+  userId: true,
+  name: true,
+  description: true,
+  languageId: true,
+  createdAt: true,
+  updatedAt: true,
+  icon: true,
+  color: true,
+});
+
+export const insertVocabularyListWordSchema = createInsertSchema(vocabularyListWords).pick({
+  listId: true,
+  wordId: true,
+  addedAt: true,
+  notes: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 
@@ -68,3 +107,9 @@ export type LearnedWord = typeof learnedWords.$inferSelect;
 
 export type InsertUserScore = z.infer<typeof insertUserScoreSchema>;
 export type UserScore = typeof userScores.$inferSelect;
+
+export type InsertVocabularyList = z.infer<typeof insertVocabularyListSchema>;
+export type VocabularyList = typeof vocabularyLists.$inferSelect;
+
+export type InsertVocabularyListWord = z.infer<typeof insertVocabularyListWordSchema>;
+export type VocabularyListWord = typeof vocabularyListWords.$inferSelect;

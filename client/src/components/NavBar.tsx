@@ -1,5 +1,6 @@
 import { useApp } from '@/contexts/AppContext';
 import AppIcon from './AppIcon';
+import { Link, useLocation } from 'wouter';
 
 export default function NavBar() {
   const { 
@@ -11,17 +12,42 @@ export default function NavBar() {
     score,
     learnedWordsCount
   } = useApp();
+  
+  const [location] = useLocation();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-10 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-14">
         <div className="flex items-center">
-          <h1 className="text-white font-bold text-lg">
-            vocab<span className="text-primary-custom">AR</span>y
-          </h1>
-          <div className="w-8 h-8 ml-3">
-            <AppIcon />
-          </div>
+          <Link href="/">
+            <a className="flex items-center">
+              <h1 className="text-white font-bold text-lg">
+                vocab<span className="text-primary-custom">AR</span>y
+              </h1>
+              <div className="w-8 h-8 ml-3">
+                <AppIcon />
+              </div>
+            </a>
+          </Link>
+          
+          <nav className="ml-8">
+            <ul className="flex space-x-6">
+              <li>
+                <Link href="/">
+                  <a className={`text-sm ${location === '/' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+                    Home
+                  </a>
+                </Link>
+              </li>
+              <li>
+                <Link href="/vocabulary-lists">
+                  <a className={`text-sm ${location === '/vocabulary-lists' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+                    My Lists
+                  </a>
+                </Link>
+              </li>
+            </ul>
+          </nav>
         </div>
         
         <div className="flex items-center space-x-4">
