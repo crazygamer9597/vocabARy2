@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import VocabularyLists from "@/pages/VocabularyLists";
+import LearnView from "@/pages/LearnView";
 import { AppProvider, useApp } from "./contexts/AppContext";
 import { configureModelStorage, preloadModels } from "./lib/modelLoader";
 import LanguageSelector from "@/components/LanguageSelector";
@@ -18,6 +19,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/learn" component={LearnView} />
       <Route path="/vocabulary-lists" component={VocabularyLists} />
       <Route component={NotFound} />
     </Switch>
