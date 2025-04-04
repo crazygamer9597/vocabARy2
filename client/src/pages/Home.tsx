@@ -1,7 +1,5 @@
 import { useEffect } from 'react';
 import ARView from '@/components/ARView';
-import Header from '@/components/Header';
-import ControlPanel from '@/components/ControlPanel';
 import LanguageSelector from '@/components/LanguageSelector';
 import LearningProgressModal from '@/components/LearningProgressModal';
 import Onboarding from '@/components/Onboarding';
@@ -27,8 +25,6 @@ export default function Home() {
   return (
     <div className="relative min-h-screen w-full overflow-hidden">
       <ARView />
-      <Header />
-      <ControlPanel />
       
       {isLanguageSelectorOpen && <LanguageSelector />}
       {isLearningProgressOpen && <LearningProgressModal />}

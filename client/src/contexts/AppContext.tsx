@@ -46,6 +46,10 @@ interface AppContextType {
   userId: number;
   learnedWordsCount: number;
   setLearnedWordsCount: (count: number) => void;
+  selectedCameraId: string | null;
+  setSelectedCameraId: (cameraId: string | null) => void;
+  isCameraAccessDenied: boolean;
+  setIsCameraAccessDenied: (value: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -61,6 +65,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
   const [currentLearnedWord, setCurrentLearnedWord] = useState<string | null>(null);
   const [learnedWordsCount, setLearnedWordsCount] = useState(3);
+  
+  // Camera state
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+  const [isCameraAccessDenied, setIsCameraAccessDenied] = useState(false);
   
   // For demo purposes, hardcoded user ID
   const userId = 1;
@@ -141,7 +149,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         pointsToNextLevel,
         userId,
         learnedWordsCount,
-        setLearnedWordsCount
+        setLearnedWordsCount,
+        selectedCameraId,
+        setSelectedCameraId,
+        isCameraAccessDenied,
+        setIsCameraAccessDenied
       }}
     >
       {children}
