@@ -74,15 +74,17 @@ export class MemStorage implements IStorage {
 
   private initializeLanguages() {
     const defaultLanguages = [
+      // Set Tamil as the first language to ensure it's the default
+      { name: "Tamil", code: "ta", wordCount: 3275 },
+      // Other Indian languages 
+      { name: "Hindi", code: "hi", wordCount: 3510 },
+      { name: "Telugu", code: "te", wordCount: 3150 },
+      { name: "Malayalam", code: "ml", wordCount: 3300 },
+      // Other languages
       { name: "Spanish", code: "es", wordCount: 3248 },
       { name: "French", code: "fr", wordCount: 3145 },
       { name: "German", code: "de", wordCount: 2976 },
       { name: "Japanese", code: "ja", wordCount: 2348 },
-      // Indian languages
-      { name: "Hindi", code: "hi", wordCount: 3510 },
-      { name: "Tamil", code: "ta", wordCount: 3275 },
-      { name: "Telugu", code: "te", wordCount: 3150 },
-      { name: "Malayalam", code: "ml", wordCount: 3300 },
     ] as const;
     
     defaultLanguages.forEach((lang, index) => {
