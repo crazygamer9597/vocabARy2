@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { playWordPronunciation } from '@/lib/pronunciationAudio';
 
 interface WordCardProps {
   object: {
@@ -20,6 +21,8 @@ export default function WordCard({ object, onMarkAsLearned, isLearned }: WordCar
     setIsLearningProgressOpen 
   } = useApp();
   
+  const [isPlaying, setIsPlaying] = useState(false);
+  
   const handleMarkAsLearned = async () => {
     if (isLearned || !selectedLanguage) return;
     
@@ -35,6 +38,23 @@ export default function WordCard({ object, onMarkAsLearned, isLearned }: WordCar
     setTimeout(() => {
       setIsLearningProgressOpen(true);
     }, 800);
+  };
+  
+  const handlePlayPronunciation = async (text: string, isOriginal: boolean = false) => {
+    if (isPlaying) return;
+    
+    try {
+      setIsPlaying(true);
+      
+      // Play pronunciation using the browser's speech synthesis
+      // For original word (English), use 'en-US', otherwise use the selected language code
+      const langCode = isOriginal ? 'en' : selectedLanguage?.code || 'en';
+      await playWordPronunciation(text, langCode);
+    } catch (error) {
+      console.error('Error playing pronunciation:', error);
+    } finally {
+      setIsPlaying(false);
+    }
   };
   
   return (
@@ -55,13 +75,37 @@ export default function WordCard({ object, onMarkAsLearned, isLearned }: WordCar
         ))}
       </div>
       <div className="space-y-2 mb-3">
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600 dark:text-gray-400">English:</span>
-          <span className="text-gray-800 dark:text-white font-medium">{object.name}</span>
+          <div className="flex items-center">
+            <span className="text-gray-800 dark:text-white font-medium mr-2">{object.name}</span>
+            <button 
+              onClick={() => handlePlayPronunciation(object.name, true)}
+              disabled={isPlaying}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              aria-label="Play English pronunciation"
+            >
+              <span className="material-icons text-sm">
+                {isPlaying ? 'volume_up' : 'volume_up'}
+              </span>
+            </button>
+          </div>
         </div>
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between items-center text-sm">
           <span className="text-gray-600 dark:text-gray-400">{selectedLanguage?.name || 'Translation'}:</span>
-          <span className="font-medium" style={{ color: '#8F87F1' }}>{object.translation}</span>
+          <div className="flex items-center">
+            <span className="font-medium mr-2" style={{ color: '#8F87F1' }}>{object.translation}</span>
+            <button 
+              onClick={() => handlePlayPronunciation(object.translation)}
+              disabled={isPlaying || !selectedLanguage}
+              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              aria-label={`Play ${selectedLanguage?.name || 'translation'} pronunciation`}
+            >
+              <span className="material-icons text-sm">
+                {isPlaying ? 'volume_up' : 'volume_up'}
+              </span>
+            </button>
+          </div>
         </div>
         {object.pronunciation && (
           <div className="flex justify-between text-sm">
@@ -70,8 +114,34 @@ export default function WordCard({ object, onMarkAsLearned, isLearned }: WordCar
           </div>
         )}
       </div>
+      
+      {/* Pronunciation controls for mobile (larger target area) */}
+      <div className="flex justify-between mb-4 md:hidden">
+        <button
+          onClick={() => handlePlayPronunciation(object.name, true)}
+          disabled={isPlaying}
+          className="flex items-center justify-center px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors text-gray-700 dark:text-gray-300 text-sm"
+        >
+          <span className="material-icons text-sm mr-1">volume_up</span>
+          English
+        </button>
+        
+        <button
+          onClick={() => handlePlayPronunciation(object.translation)}
+          disabled={isPlaying || !selectedLanguage}
+          className="flex items-center justify-center px-3 py-1 rounded-lg"
+          style={{ 
+            background: 'linear-gradient(90deg, #8F87F140, #C68EFD40)',
+            color: '#8F87F1'
+          }}
+        >
+          <span className="material-icons text-sm mr-1">volume_up</span>
+          {selectedLanguage?.name || 'Translation'}
+        </button>
+      </div>
+      
       <button 
-        className={`mt-2 w-full text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center`}
+        className={`w-full text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors flex items-center justify-center`}
         style={{ 
           background: isLearned 
             ? 'linear-gradient(90deg, #10B981, #34D399)' 

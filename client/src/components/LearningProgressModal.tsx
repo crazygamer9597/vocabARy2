@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
 import { useQuery } from '@tanstack/react-query';
+import { playWordPronunciation } from '@/lib/pronunciationAudio';
 
 interface LearnedWord {
   id: number;
@@ -23,6 +24,7 @@ export default function LearningProgressModal() {
   } = useApp();
   
   const [showAnimation, setShowAnimation] = useState(false);
+  const [playingWordId, setPlayingWordId] = useState<number | null>(null);
   const progressPercentage = 100 - (pointsToNextLevel);
   
   // Fetch the user's learned words
@@ -100,6 +102,20 @@ export default function LearningProgressModal() {
                 <span className="text-gray-800 font-semibold">{currentLearnedWord || 'New word'}</span>
                 <span className="text-gray-500">•</span>
                 <span className="font-semibold" style={{ color: '#C68EFD' }}>{selectedLanguage?.name || 'Language'}</span>
+                
+                {currentLearnedWord && (
+                  <button 
+                    onClick={() => {
+                      if (selectedLanguage) {
+                        playWordPronunciation(currentLearnedWord, selectedLanguage.code);
+                      }
+                    }}
+                    className="ml-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center w-7 h-7 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                    aria-label="Play pronunciation"
+                  >
+                    <span className="material-icons text-sm">volume_up</span>
+                  </button>
+                )}
               </div>
               <p className="text-gray-600 dark:text-gray-300 text-sm">
                 +10 points added to your vocabulary score!
@@ -157,20 +173,72 @@ export default function LearningProgressModal() {
                 </div>
               ) : learnedWords?.learnedWords?.length > 0 ? (
                 <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
-                  {learnedWords.learnedWords.slice(0, 5).map((word: LearnedWord) => (
-                    <div 
-                      key={word.id} 
-                      className="flex justify-between items-center p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm"
-                    >
-                      <div>
-                        <div className="font-medium text-sm">{word.translation}</div>
-                        <div className="text-xs text-gray-500">{word.word}</div>
+                  {learnedWords.learnedWords.slice(0, 5).map((word: LearnedWord) => {
+                    const isPlaying = playingWordId === word.id;
+                    
+                    const handlePlayWord = async (isOriginal: boolean = false) => {
+                      if (playingWordId !== null) return; // Already playing audio
+                      
+                      try {
+                        setPlayingWordId(word.id);
+                        const text = isOriginal ? word.word : word.translation;
+                        const langCode = isOriginal ? 'en' : selectedLanguage?.code || 'en';
+                        await playWordPronunciation(text, langCode);
+                      } catch (error) {
+                        console.error('Error playing pronunciation:', error);
+                      } finally {
+                        setPlayingWordId(null);
+                      }
+                    };
+                    
+                    return (
+                      <div 
+                        key={word.id} 
+                        className="p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm"
+                      >
+                        <div className="flex justify-between items-center mb-1">
+                          <div>
+                            <div className="font-medium text-sm">{word.translation}</div>
+                            <div className="text-xs text-gray-500">{word.word}</div>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <button
+                              onClick={() => handlePlayWord()}
+                              disabled={isPlaying}
+                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                              aria-label={`Play ${selectedLanguage?.name} pronunciation`}
+                              style={{ color: isPlaying ? '#C68EFD' : undefined }}
+                            >
+                              <span className="material-icons text-xs">
+                                volume_up
+                              </span>
+                            </button>
+                            <button
+                              onClick={() => handlePlayWord(true)}
+                              disabled={isPlaying}
+                              className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex items-center justify-center w-6 h-6 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                              aria-label="Play English pronunciation"
+                              style={{ color: isPlaying ? '#8F87F1' : undefined }}
+                            >
+                              <span className="material-icons text-xs">
+                                volume_up
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <div className="text-xs text-gray-500">
+                            {new Date(word.learnedAt).toLocaleDateString()}
+                          </div>
+                          {isPlaying && (
+                            <div className="text-xs" style={{ color: '#C68EFD' }}>
+                              Playing audio...
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {new Date(word.learnedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center text-gray-500 py-3 text-sm">
