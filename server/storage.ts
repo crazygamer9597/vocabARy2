@@ -49,16 +49,28 @@ export class MemStorage implements IStorage {
   }
 
   private initializeLanguages() {
-    const defaultLanguages: InsertLanguage[] = [
+    const defaultLanguages = [
       { name: "Spanish", code: "es", wordCount: 3248 },
       { name: "French", code: "fr", wordCount: 3145 },
       { name: "German", code: "de", wordCount: 2976 },
       { name: "Japanese", code: "ja", wordCount: 2348 },
-    ];
+      // Indian languages
+      { name: "Hindi", code: "hi", wordCount: 3510 },
+      { name: "Tamil", code: "ta", wordCount: 3275 },
+      { name: "Telugu", code: "te", wordCount: 3150 },
+      { name: "Malayalam", code: "ml", wordCount: 3300 },
+    ] as const;
     
     defaultLanguages.forEach((lang, index) => {
       const id = index + 1;
-      this.languages.set(id, { ...lang, id });
+      // Create a proper Language object
+      const language: Language = {
+        id,
+        name: lang.name,
+        code: lang.code,
+        wordCount: lang.wordCount
+      };
+      this.languages.set(id, language);
     });
   }
 

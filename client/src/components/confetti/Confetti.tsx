@@ -7,8 +7,8 @@ export default function Confetti() {
     if (!containerRef.current) return;
     
     const container = containerRef.current;
-    const colors = ['#4F46E5', '#EC4899', '#10B981', '#FBBF24', '#F43F5E'];
-    const confettiCount = 50;
+    const colors = ['#8F87F1', '#C68EFD', '#E9A5F1', '#FED2E2'];
+    const confettiCount = 75;
     
     // Create confetti elements
     for (let i = 0; i < confettiCount; i++) {
