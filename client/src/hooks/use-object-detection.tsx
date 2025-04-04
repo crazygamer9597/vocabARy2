@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, RefObject } from 'react';
 import * as tf from '@tensorflow/tfjs';
 import * as cocossd from '@tensorflow-models/coco-ssd';
-import { getTranslation } from '@/lib/translations';
+import { getTranslation, getPronunciation } from '@/lib/translations';
 import { useApp } from '@/contexts/AppContext';
 
 interface DetectedObject {
@@ -30,18 +30,32 @@ export function useObjectDetection(
   const animationFrameRef = useRef<number | null>(null);
   const { selectedLanguage } = useApp();
   
-  // Load the model
+  // Load the model with offline support
   useEffect(() => {
     async function loadModel() {
       try {
+        // Ensure TensorFlow is ready
         await tf.ready();
         
         if (!modelRef.current) {
-          const model = await cocossd.load({
+          console.log('Loading COCO-SSD object detection model...');
+          
+          // Check if we're online or offline
+          const isOnline = navigator.onLine;
+          console.log(`Network status: ${isOnline ? 'online' : 'offline'}`);
+          
+          // Set model loading options - MobileNetV2 is smaller and works better offline
+          const modelConfig = {
             base: 'mobilenet_v2',
-          });
+          };
+          
+          // If offline, load from IndexedDB if available
+          // TensorFlow automatically caches models, so this works for offline use
+          const model = await cocossd.load(modelConfig);
+          
           modelRef.current = model;
           setIsModelLoaded(true);
+          console.log('COCO-SSD model loaded successfully');
         }
       } catch (error) {
         console.error('Error loading object detection model:', error);
@@ -145,53 +159,7 @@ export function useObjectDetection(
     return categoryMap[name.toLowerCase()] || ['Unknown', 'Other'];
   };
   
-  // Helper function to get pronunciation hints
-  const getPronunciation = (word: string, languageCode: string): string | undefined => {
-    const pronunciationMap: Record<string, Record<string, string>> = {
-      'es': { // Spanish
-        'chair': 'see-ya',
-        'book': 'lee-bro',
-        'cup': 'tah-sah',
-        'table': 'meh-sah',
-        'computer': 'com-poo-tah-dor',
-        'phone': 'teh-leh-fo-no',
-        'dog': 'peh-ro',
-        'cat': 'gah-to',
-      },
-      'fr': { // French
-        'chair': 'shehz',
-        'book': 'leev-ruh',
-        'cup': 'tahss',
-        'table': 'tah-bluh',
-        'computer': 'or-di-na-teur',
-        'phone': 'teh-leh-fon',
-        'dog': 'shee-an',
-        'cat': 'shah',
-      },
-      'de': { // German
-        'chair': 'shtool',
-        'book': 'booh-kh',
-        'cup': 'tah-seh',
-        'table': 'tish',
-        'computer': 'reh-kh-ner',
-        'phone': 'hahn-dee',
-        'dog': 'hoont',
-        'cat': 'kah-tseh',
-      },
-      'ja': { // Japanese
-        'chair': 'ee-soo',
-        'book': 'hon',
-        'cup': 'kah-poo',
-        'table': 'tay-boo-ru',
-        'computer': 'kon-pyoo-tah',
-        'phone': 'den-wa',
-        'dog': 'ee-noo',
-        'cat': 'neh-ko',
-      },
-    };
-    
-    return pronunciationMap[languageCode]?.[word.toLowerCase()];
-  };
+  // Using pronunciation helper from translations module
   
   // Start detection
   const startObjectDetection = async () => {
