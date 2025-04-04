@@ -58,8 +58,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isOnboardingVisible, setIsOnboardingVisible] = useState(true);
   const [isLanguageSelectorOpen, setIsLanguageSelectorOpen] = useState(false);
   const [isLearningProgressOpen, setIsLearningProgressOpen] = useState(false);
-  const [score, setScore] = useState(120);
-  const [level, setLevel] = useState(4);
+  const [score, setScore] = useState(10);
+  const [level, setLevel] = useState(1);
   const [languages, setLanguages] = useState<Language[]>([]);
   // Try to load the selected language from localStorage
   const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(() => {
@@ -72,7 +72,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   });
   const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
   const [currentLearnedWord, setCurrentLearnedWord] = useState<string | null>(null);
-  const [learnedWordsCount, setLearnedWordsCount] = useState(3);
+  const [learnedWordsCount, setLearnedWordsCount] = useState(0);
   
   // Camera state
   const [selectedCameraId, setSelectedCameraId] = useState<string | null>(() => {

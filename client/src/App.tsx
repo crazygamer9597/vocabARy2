@@ -6,8 +6,10 @@ import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/Home";
 import VocabularyLists from "@/pages/VocabularyLists";
-import { AppProvider } from "./contexts/AppContext";
+import { AppProvider, useApp } from "./contexts/AppContext";
 import { configureModelStorage, preloadModels } from "./lib/modelLoader";
+import LanguageSelector from "@/components/LanguageSelector";
+import LearningProgressModal from "@/components/LearningProgressModal";
 
 // Configure TensorFlow models for offline use
 configureModelStorage().catch(err => console.error("Failed to configure model storage", err));
@@ -22,7 +24,9 @@ function Router() {
   );
 }
 
-function App() {
+function AppContent() {
+  const { isLanguageSelectorOpen, isLearningProgressOpen } = useApp();
+  
   // Preload models on app start
   useEffect(() => {
     // Initialize TensorFlow and preload models
@@ -50,10 +54,20 @@ function App() {
   }, []);
   
   return (
+    <>
+      <Router />
+      <Toaster />
+      {isLanguageSelectorOpen && <LanguageSelector />}
+      {isLearningProgressOpen && <LearningProgressModal />}
+    </>
+  );
+}
+
+function App() {
+  return (
     <QueryClientProvider client={queryClient}>
       <AppProvider>
-        <Router />
-        <Toaster />
+        <AppContent />
       </AppProvider>
     </QueryClientProvider>
   );

@@ -19,31 +19,31 @@ export default function NavBar() {
     <header className="fixed top-0 left-0 right-0 z-10 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-14">
         <div className="flex items-center">
-          <Link href="/">
-            <a className="flex items-center">
-              <h1 className="text-white font-bold text-lg">
+          <div className="flex items-center">
+            <Link href="/">
+              <h1 className="text-white font-bold text-lg cursor-pointer">
                 vocab<span className="text-primary-custom">AR</span>y
               </h1>
-              <div className="w-8 h-8 ml-3">
-                <AppIcon />
-              </div>
-            </a>
-          </Link>
+            </Link>
+            <div className="w-8 h-8 ml-3">
+              <AppIcon />
+            </div>
+          </div>
           
           <nav className="ml-8">
             <ul className="flex space-x-6">
               <li>
                 <Link href="/">
-                  <a className={`text-sm ${location === '/' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+                  <span className={`text-sm cursor-pointer ${location === '/' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
                     Home
-                  </a>
+                  </span>
                 </Link>
               </li>
               <li>
                 <Link href="/vocabulary-lists">
-                  <a className={`text-sm ${location === '/vocabulary-lists' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
+                  <span className={`text-sm cursor-pointer ${location === '/vocabulary-lists' ? 'text-white font-medium' : 'text-gray-400 hover:text-white'}`}>
                     My Lists
-                  </a>
+                  </span>
                 </Link>
               </li>
             </ul>
