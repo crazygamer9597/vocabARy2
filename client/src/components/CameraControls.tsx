@@ -183,10 +183,10 @@ export default function CameraControls() {
               <button
                 key={camera.deviceId}
                 onClick={() => switchCamera(camera.deviceId)}
-                className={`flex items-center w-full px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 
+                className={`flex items-center w-full px-4 py-2 text-sm text-gray-800 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 
                   ${selectedCameraId === camera.deviceId ? 'bg-gray-100 dark:bg-gray-700' : ''}`}
               >
-                <span className="material-icons mr-2 text-sm">
+                <span className="material-icons mr-2 text-sm text-gray-700 dark:text-gray-300">
                   {camera.label.toLowerCase().includes('back') || camera.label.toLowerCase().includes('rear')
                     ? 'camera_rear' 
                     : camera.label.toLowerCase().includes('front') || camera.label.toLowerCase().includes('user')
