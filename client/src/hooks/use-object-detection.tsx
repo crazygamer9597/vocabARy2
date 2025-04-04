@@ -4,6 +4,8 @@ import * as cocossd from '@tensorflow-models/coco-ssd';
 import { getTranslation, getPronunciation } from '@/lib/translations';
 import { useApp } from '@/contexts/AppContext';
 
+type ObjectDetectionBaseModel = 'mobilenet_v1' | 'mobilenet_v2' | 'lite_mobilenet_v2';
+
 interface DetectedObject {
   name: string;
   translation: string;
@@ -46,7 +48,7 @@ export function useObjectDetection(
           
           // Set model loading options - MobileNetV2 is smaller and works better offline
           const modelConfig = {
-            base: 'mobilenet_v2',
+            base: 'mobilenet_v2' as const,
           };
           
           // If offline, load from IndexedDB if available

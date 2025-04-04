@@ -1,4 +1,5 @@
 import { useApp } from '@/contexts/AppContext';
+import AppIcon from './AppIcon';
 
 export default function Header() {
   const { score } = useApp();
@@ -7,8 +8,8 @@ export default function Header() {
     <header className="absolute top-0 left-0 right-0 z-10 p-4">
       <div className="flex justify-between items-center">
         <div className="flex items-center">
-          <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-2">
-            <span className="material-icons text-primary">translate</span>
+          <div className="w-10 h-10 flex items-center justify-center mr-2">
+            <AppIcon />
           </div>
           <h1 className="text-xl font-bold text-white">vocab<span className="text-primary">AR</span>y</h1>
         </div>

@@ -1,5 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useQuery } from '@tanstack/react-query';
+
+interface LearnedWord {
+  id: number;
+  userId: number;
+  word: string;
+  translation: string;
+  languageId: number;
+  learnedAt: string;
+}
 
 export default function LearningProgressModal() {
   const { 
@@ -8,11 +18,25 @@ export default function LearningProgressModal() {
     level, 
     pointsToNextLevel,
     currentLearnedWord,
-    selectedLanguage
+    selectedLanguage,
+    userId
   } = useApp();
   
   const [showAnimation, setShowAnimation] = useState(false);
   const progressPercentage = 100 - (pointsToNextLevel);
+  
+  // Fetch the user's learned words
+  const { data: learnedWords, isLoading } = useQuery({
+    queryKey: ['/api/users', userId, 'words'],
+    queryFn: async () => {
+      const response = await fetch(`/api/users/${userId}/words`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch learned words');
+      }
+      return response.json();
+    },
+    enabled: !!userId,
+  });
 
   useEffect(() => {
     // Start the animation when the component mounts
@@ -113,6 +137,49 @@ export default function LearningProgressModal() {
             </div>
           </div>
           
+          {/* Recent learned words */}
+          <div className="bg-gray-100 dark:bg-gray-700 rounded-xl p-4 mb-4 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-10 bg-gradient-to-r from-[#8F87F1] to-[#E9A5F1]"></div>
+            <div className="relative">
+              <h3 className="font-medium mb-3 flex items-center" style={{ color: '#C68EFD' }}>
+                <span className="material-icons mr-1 text-sm">history</span>
+                Recently Learned Words
+              </h3>
+              
+              {isLoading ? (
+                <div className="flex justify-center p-4">
+                  <div className="w-5 h-5 rounded-full animate-spin" 
+                    style={{ 
+                      border: '2px solid rgba(200, 200, 200, 0.3)',
+                      borderTop: '2px solid #C68EFD'
+                    }}>
+                  </div>
+                </div>
+              ) : learnedWords?.learnedWords?.length > 0 ? (
+                <div className="space-y-2 max-h-40 overflow-y-auto pr-1 scrollbar-thin">
+                  {learnedWords.learnedWords.slice(0, 5).map((word: LearnedWord) => (
+                    <div 
+                      key={word.id} 
+                      className="flex justify-between items-center p-2 rounded-lg bg-white dark:bg-gray-800 shadow-sm"
+                    >
+                      <div>
+                        <div className="font-medium text-sm">{word.translation}</div>
+                        <div className="text-xs text-gray-500">{word.word}</div>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {new Date(word.learnedAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-3 text-sm">
+                  No words learned yet
+                </div>
+              )}
+            </div>
+          </div>
+          
           <div className="flex space-x-3">
             <button 
               className="flex-1 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-white py-3 rounded-xl font-medium transition-colors"
@@ -123,6 +190,15 @@ export default function LearningProgressModal() {
             <button 
               className="flex-1 text-white py-3 rounded-xl font-medium transition-colors flex items-center justify-center"
               style={{ background: 'linear-gradient(90deg, #8F87F1, #C68EFD)' }}
+              onClick={() => {
+                if (navigator.share) {
+                  navigator.share({
+                    title: 'My vocabARy Progress',
+                    text: `I've learned ${learnedWords?.learnedWords?.length || 0} words in ${selectedLanguage?.name || 'a new language'} and reached level ${level}!`,
+                    url: window.location.href,
+                  }).catch((error) => console.log('Error sharing', error));
+                }
+              }}
             >
               <span className="material-icons mr-1 text-sm">share</span>
               Share Progress

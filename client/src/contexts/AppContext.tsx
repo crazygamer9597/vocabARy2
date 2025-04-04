@@ -90,10 +90,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const data = await response.json();
         setLanguages(data.languages);
         
-        // Set Spanish as default language if available
-        const spanish = data.languages.find((lang: Language) => lang.name === 'Spanish');
-        if (spanish) {
-          setSelectedLanguage(spanish);
+        // Set Tamil as default language if available
+        const tamil = data.languages.find((lang: Language) => lang.name === 'Tamil');
+        if (tamil) {
+          setSelectedLanguage(tamil);
         } else if (data.languages.length > 0) {
           setSelectedLanguage(data.languages[0]);
         }

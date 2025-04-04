@@ -49,6 +49,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all learned words for a user
+  app.get("/api/users/:userId/words", async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID" });
+      }
+
+      const learnedWords = await storage.getLearnedWords(userId);
+      res.json({ learnedWords });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch learned words" });
+    }
+  });
+
   // Add a learned word and update score
   app.post("/api/users/:userId/words", async (req, res) => {
     try {
@@ -65,10 +80,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const validatedData = insertLearnedWordSchema.parse(wordData);
+      
+      // Check if the word was already learned (recap)
+      const existingWords = await storage.getLearnedWords(userId);
+      const isRecap = existingWords.some(
+        word => word.word.toLowerCase() === validatedData.word.toLowerCase()
+      );
+      
+      // Add the word to the learned words list
       const learnedWord = await storage.addLearnedWord(validatedData);
       
-      // Award 10 points for each new word learned
-      const updatedScore = await storage.incrementUserScore(userId, 10);
+      // Award 10 points for new words, 5 points for recapped words
+      const pointsToAdd = isRecap ? 5 : 10;
+      const updatedScore = await storage.incrementUserScore(userId, pointsToAdd);
       
       res.json({ 
         success: true, 
