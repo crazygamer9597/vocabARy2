@@ -16,12 +16,12 @@ export default function NavBar() {
     <header className="fixed top-0 left-0 right-0 z-10 bg-gray-900/80 backdrop-blur-sm border-b border-gray-800">
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-14">
         <div className="flex items-center">
-          <div className="w-8 h-8 mr-2">
-            <AppIcon />
-          </div>
           <h1 className="text-white font-bold text-lg">
             vocab<span className="text-primary-custom">AR</span>y
           </h1>
+          <div className="w-8 h-8 ml-3">
+            <AppIcon />
+          </div>
         </div>
         
         <div className="flex items-center space-x-4">
