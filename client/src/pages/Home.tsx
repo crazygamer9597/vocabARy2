@@ -1,19 +1,11 @@
 import { useEffect } from 'react';
-import ARView from '@/components/ARView';
-import LanguageSelector from '@/components/LanguageSelector';
-import LearningProgressModal from '@/components/LearningProgressModal';
-import Onboarding from '@/components/Onboarding';
+import LandingPage from '@/components/LandingPage';
 import { useApp } from '@/contexts/AppContext';
 
 export default function Home() {
-  const { 
-    isOnboardingVisible, 
-    isLanguageSelectorOpen, 
-    isLearningProgressOpen,
-    setIsOnboardingVisible
-  } = useApp();
+  const { setIsOnboardingVisible } = useApp();
 
-  // Process URL parameters
+  // Process URL parameters and initialize app
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('skipOnboarding') === 'true') {
@@ -22,13 +14,5 @@ export default function Home() {
     }
   }, [setIsOnboardingVisible]);
 
-  return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      <ARView />
-      
-      {isLanguageSelectorOpen && <LanguageSelector />}
-      {isLearningProgressOpen && <LearningProgressModal />}
-      {isOnboardingVisible && <Onboarding />}
-    </div>
-  );
+  return <LandingPage />;
 }
