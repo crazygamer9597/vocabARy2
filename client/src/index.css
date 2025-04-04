@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-gray-900 text-white;
+    overflow: hidden;
+    touch-action: none;
+  }
+}
+
+@layer components {
+  .ar-object-marker {
+    @apply absolute transform -translate-x-1/2 -translate-y-1/2 pointer-events-none;
+  }
+
+  .word-card-appear {
+    animation: cardAppear 0.3s ease-out forwards;
+  }
+
+  .confetti {
+    @apply absolute w-2.5 h-2.5 pointer-events-none opacity-0;
+    animation: confettiFall 3s ease-in-out forwards;
+  }
+}
+
+@keyframes cardAppear {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(300px) rotate(360deg); opacity: 0; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes scorePop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
