@@ -180,8 +180,34 @@ export function useObjectDetection(
     setIsRunning(true);
     
     const detectObjects = async () => {
-      if (!videoRef.current || !modelRef.current || !isRunning) {
-        console.log('Detection stopped or resources unavailable');
+      if (!isRunning) {
+        console.log('Detection stopped');
+        return;
+      }
+      
+      if (!videoRef.current || !modelRef.current) {
+        console.log('Detection resources unavailable, retrying...');
+        if (isRunning) {
+          // If we're still supposed to be running, retry after a short delay
+          setTimeout(() => {
+            if (isRunning) {
+              animationFrameRef.current = requestAnimationFrame(detectObjects);
+            }
+          }, 1000);
+        }
+        return;
+      }
+      
+      // Check if video is actually ready for detection
+      if (videoRef.current.readyState < 2) { // HAVE_CURRENT_DATA = 2
+        console.log('Video not ready yet, retrying...');
+        if (isRunning) {
+          setTimeout(() => {
+            if (isRunning) {
+              animationFrameRef.current = requestAnimationFrame(detectObjects);
+            }
+          }, 500);
+        }
         return;
       }
       
@@ -199,22 +225,26 @@ export function useObjectDetection(
               const { class: name, score, bbox } = prediction;
               const [x, y, width, height] = bbox;
               
+              // Make sure we have valid dimensions to avoid divide-by-zero errors
+              const videoWidth = videoRef.current?.videoWidth || 1;
+              const videoHeight = videoRef.current?.videoHeight || 1;
+              
               // Calculate normalized positions (0-1) for the object
-              const normalizedX = x / videoRef.current!.videoWidth;
-              const normalizedY = y / videoRef.current!.videoHeight;
-              const normalizedWidth = width / videoRef.current!.videoWidth;
-              const normalizedHeight = height / videoRef.current!.videoHeight;
+              const normalizedX = x / videoWidth;
+              const normalizedY = y / videoHeight;
+              const normalizedWidth = width / videoWidth;
+              const normalizedHeight = height / videoHeight;
               
               // Get translation for the detected object
               const translation = await getTranslation(
                 name, 
-                selectedLanguage?.code || 'es'
+                selectedLanguage?.code || 'ta' // Default to Tamil if no language selected
               );
               
               // Get pronunciation hint if available
               const pronunciation = getPronunciation(
                 name,
-                selectedLanguage?.code || 'es'
+                selectedLanguage?.code || 'ta'
               );
               
               return {
@@ -237,6 +267,7 @@ export function useObjectDetection(
         }
       } catch (error) {
         console.error('Error detecting objects:', error);
+        // Don't stop on error, just continue the loop
       }
       
       // Continue detection loop

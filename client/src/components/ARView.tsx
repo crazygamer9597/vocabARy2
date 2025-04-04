@@ -74,15 +74,20 @@ export default function ARView() {
     }
   }, []);
   
+  // Make sure object detection starts regardless of AR mode
   useEffect(() => {
-    if (arActive) {
+    // We'll start object detection when:
+    // 1. AR is active (for AR mode)
+    // 2. OR WebXR is not supported but camera is available (for camera fallback mode)
+    if (arActive || (!arSupported && videoRef.current && videoRef.current.readyState >= 2 && !isCameraAccessDenied)) {
+      console.log('Starting object detection');
       startObjectDetection();
     }
     
     return () => {
       stopObjectDetection();
     };
-  }, [arActive, startObjectDetection, stopObjectDetection]);
+  }, [arActive, arSupported, startObjectDetection, stopObjectDetection, isCameraAccessDenied]);
   
   // Initialize camera on load and when the selected camera changes
   useEffect(() => {
@@ -150,12 +155,10 @@ export default function ARView() {
         style={{ marginTop: '56px', marginBottom: '32px' }}
       >
         {!arSupported && (
-          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900">
-            <div className="text-center p-6 max-w-md">
-              <div className="text-secondary text-xl mb-2">WebXR Not Supported</div>
-              <p className="text-gray-400 text-sm">
-                Your browser doesn't support WebXR. Using camera fallback mode.
-              </p>
+          <div className="absolute top-0 left-0 bg-black bg-opacity-70 p-2 rounded-br-lg text-white z-10 text-xs max-w-[200px]">
+            <div className="flex items-center">
+              <span className="material-icons text-yellow-500 mr-1 text-sm">warning</span>
+              <span>WebXR not supported. Using camera mode.</span>
             </div>
           </div>
         )}
