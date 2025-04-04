@@ -84,9 +84,12 @@ export default function ARView() {
     };
   }, [arActive, startObjectDetection, stopObjectDetection]);
   
-  // When the selected camera changes, restart the video stream
+  // Initialize camera on load and when the selected camera changes
   useEffect(() => {
-    if (selectedCameraId && videoRef.current && !arActive && !isCameraAccessDenied) {
+    // Initialize camera if not in AR mode and not denied access
+    if (videoRef.current && !arActive && !isCameraAccessDenied) {
+      console.log('Initializing camera feed');
+      
       // Stop any existing video stream
       if (videoRef.current.srcObject) {
         const stream = videoRef.current.srcObject as MediaStream;
@@ -103,15 +106,22 @@ export default function ARView() {
         }
       })
       .then(stream => {
+        console.log('Camera access granted, starting video stream');
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
+          // Start object detection once video starts
+          videoRef.current.onloadedmetadata = () => {
+            videoRef.current?.play();
+            startObjectDetection();
+          };
         }
       })
       .catch(error => {
         console.error('Error accessing camera:', error);
+        alert('Error accessing camera. Please ensure camera permissions are granted.');
       });
     }
-  }, [selectedCameraId, arActive, isCameraAccessDenied]);
+  }, [selectedCameraId, arActive, isCameraAccessDenied, startObjectDetection]);
   
   // Trigger confetti animation
   const triggerConfetti = () => {
@@ -150,14 +160,34 @@ export default function ARView() {
           </div>
         )}
         
+        {/* Show message when camera access is denied */}
+        {isCameraAccessDenied && (
+          <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900 z-50">
+            <div className="text-center p-6 max-w-md bg-gray-900 rounded-lg shadow-xl border border-red-500">
+              <span className="material-icons text-red-500 text-4xl mb-4">videocam_off</span>
+              <div className="text-white text-xl mb-2">Camera Access Denied</div>
+              <p className="text-gray-300 text-sm mb-4">
+                Please allow camera access in your browser settings to use this application.
+              </p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-4 py-2 bg-primary-custom rounded-md text-white"
+              >
+                Try Again
+              </button>
+            </div>
+          </div>
+        )}
+        
         {/* Either WebXR canvas or fallback video will be displayed */}
         <canvas ref={canvasRef} className="absolute inset-0 w-full h-full"></canvas>
         <video 
           ref={videoRef} 
           className={`absolute inset-0 w-full h-full object-cover ${arActive ? 'hidden' : ''}`}
           playsInline
-          autoPlay
-          muted
+          autoPlay={true}
+          muted={true}
+          style={{ transform: 'scaleX(-1)' }} /* Mirror video for selfie mode */
         ></video>
         
         {/* Object markers and word cards */}

@@ -165,12 +165,25 @@ export function useObjectDetection(
   
   // Start detection
   const startObjectDetection = async () => {
-    if (!isModelLoaded || !videoRef.current || !modelRef.current) return;
+    if (!videoRef.current) {
+      console.error('Video element not available for object detection');
+      return;
+    }
     
+    if (!isModelLoaded || !modelRef.current) {
+      console.log('Waiting for model to load before starting detection');
+      setTimeout(startObjectDetection, 1000); // Retry in 1 second
+      return;
+    }
+    
+    console.log('Starting object detection');
     setIsRunning(true);
     
     const detectObjects = async () => {
-      if (!videoRef.current || !modelRef.current || !isRunning) return;
+      if (!videoRef.current || !modelRef.current || !isRunning) {
+        console.log('Detection stopped or resources unavailable');
+        return;
+      }
       
       try {
         const predictions = await modelRef.current.detect(videoRef.current);

@@ -61,7 +61,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [score, setScore] = useState(120);
   const [level, setLevel] = useState(4);
   const [languages, setLanguages] = useState<Language[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(null);
+  // Try to load the selected language from localStorage
+  const [selectedLanguage, setSelectedLanguage] = useState<Language | null>(() => {
+    try {
+      const savedLanguage = localStorage.getItem('selectedLanguage');
+      return savedLanguage ? JSON.parse(savedLanguage) : null;
+    } catch (error) {
+      return null;
+    }
+  });
   const [detectedObjects, setDetectedObjects] = useState<DetectedObject[]>([]);
   const [currentLearnedWord, setCurrentLearnedWord] = useState<string | null>(null);
   const [learnedWordsCount, setLearnedWordsCount] = useState(3);
@@ -90,11 +98,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const data = await response.json();
         setLanguages(data.languages);
         
-        // Set Tamil as default language if available
+        // Always set Tamil as default language
         const tamil = data.languages.find((lang: Language) => lang.name === 'Tamil');
         if (tamil) {
+          console.log('Setting Tamil as default language');
           setSelectedLanguage(tamil);
+          // Store the selection in localStorage for persistence
+          localStorage.setItem('selectedLanguage', JSON.stringify(tamil));
         } else if (data.languages.length > 0) {
+          console.log('Tamil not found, using first available language');
           setSelectedLanguage(data.languages[0]);
         }
       } catch (error) {
