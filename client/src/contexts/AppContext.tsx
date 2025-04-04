@@ -75,7 +75,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [learnedWordsCount, setLearnedWordsCount] = useState(3);
   
   // Camera state
-  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(null);
+  const [selectedCameraId, setSelectedCameraId] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem('selectedCameraId');
+    } catch (error) {
+      return null;
+    }
+  });
   const [isCameraAccessDenied, setIsCameraAccessDenied] = useState(false);
   
   // For demo purposes, hardcoded user ID
