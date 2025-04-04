@@ -1,0 +1,127 @@
+/* Tutorial animations */
+
+/* Camera pan animation */
+@keyframes cameraPan {
+  0% {
+    transform: rotate(0deg) translateX(0px);
+  }
+  25% {
+    transform: rotate(-5deg) translateX(-5px);
+  }
+  50% {
+    transform: rotate(0deg) translateX(0px);
+  }
+  75% {
+    transform: rotate(5deg) translateX(5px);
+  }
+  100% {
+    transform: rotate(0deg) translateX(0px);
+  }
+}
+
+.camera-pan-animation {
+  animation: cameraPan 3s ease-in-out infinite;
+}
+
+/* Object highlight animation */
+@keyframes objectHighlight {
+  0% {
+    box-shadow: 0 0 0 0 rgba(198, 142, 253, 0.7);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(198, 142, 253, 0);
+    transform: scale(1.1);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(198, 142, 253, 0);
+    transform: scale(1);
+  }
+}
+
+.object-highlight-animation {
+  animation: objectHighlight 2s ease-in-out infinite;
+}
+
+/* Word learning animation */
+@keyframes wordLearn {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  25% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-10px);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.word-learn-animation {
+  animation: wordLearn 3s ease-in-out infinite;
+}
+
+/* Points animation */
+@keyframes pointsAnim {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.2) rotate(10deg);
+  }
+  50% {
+    transform: scale(1) rotate(0deg);
+  }
+  75% {
+    transform: scale(1.2) rotate(-10deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+.points-animation {
+  animation: pointsAnim 2s ease-in-out infinite;
+}
+
+/* Tutorial appear animation */
+@keyframes tutorialAppear {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.tutorial-appear {
+  animation: tutorialAppear 0.5s ease-out forwards;
+}
+
+/* Animation for tutorial steps transition */
+@keyframes stepTransition {
+  0% {
+    transform: translateX(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.step-transition {
+  animation: stepTransition 0.3s ease-out forwards;
+}

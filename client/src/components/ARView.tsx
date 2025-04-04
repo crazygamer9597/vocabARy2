@@ -7,6 +7,8 @@ import Confetti from './confetti/Confetti';
 import CameraControls from './CameraControls';
 import NavBar from './NavBar';
 import Footer from './Footer';
+import ARTutorial from './tutorial/ARTutorial';
+import TutorialOverlay from './tutorial/TutorialOverlay';
 import { useApp } from '@/contexts/AppContext';
 
 export default function ARView() {
@@ -17,6 +19,8 @@ export default function ARView() {
   const [showConfetti, setShowConfetti] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [markedAsLearned, setMarkedAsLearned] = useState<Set<string>>(new Set());
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showTutorialOverlay, setShowTutorialOverlay] = useState(false);
   
   const { 
     detectedObjects, 
@@ -44,6 +48,15 @@ export default function ARView() {
     }
   );
   
+  // Check if tutorial has been viewed before
+  useEffect(() => {
+    const tutorialViewed = localStorage.getItem('arTutorialViewed');
+    if (!tutorialViewed) {
+      // Only show tutorial if it hasn't been viewed before
+      setShowTutorial(true);
+    }
+  }, []);
+
   useEffect(() => {
     if (containerRef.current) {
       const updateSize = () => {
@@ -117,6 +130,9 @@ export default function ARView() {
     <div className="flex flex-col h-screen bg-black">
       <NavBar />
       
+      {/* AR Tutorial Overlay */}
+      {showTutorial && <ARTutorial />}
+      
       <div 
         id="ar-view" 
         ref={containerRef} 
@@ -164,6 +180,45 @@ export default function ARView() {
         
         {/* Camera controls */}
         <CameraControls />
+        
+        {/* In-camera Tutorial Overlay */}
+        {showTutorialOverlay && (
+          <TutorialOverlay onClose={() => setShowTutorialOverlay(false)} />
+        )}
+        
+        {/* Help button with dropdown menu */}
+        <div className="absolute top-20 right-4 z-20">
+          <div className="relative group">
+            <button
+              className="bg-gray-800 bg-opacity-70 p-2 rounded-full text-white hover:bg-opacity-100 transition-all duration-200"
+              aria-label="Tutorial options"
+            >
+              <span className="material-icons">help_outline</span>
+            </button>
+            
+            {/* Dropdown menu */}
+            <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-900 bg-opacity-95 ring-1 ring-black ring-opacity-5 invisible group-hover:visible transition-all duration-200 origin-top-right">
+              <div className="py-1" role="menu" aria-orientation="vertical">
+                <button
+                  onClick={() => setShowTutorial(true)}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-800 hover:text-white flex items-center"
+                  role="menuitem"
+                >
+                  <span className="material-icons mr-2 text-sm">menu_book</span>
+                  Full Tutorial
+                </button>
+                <button
+                  onClick={() => setShowTutorialOverlay(true)}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-100 hover:bg-gray-800 hover:text-white flex items-center"
+                  role="menuitem"
+                >
+                  <span className="material-icons mr-2 text-sm">live_help</span>
+                  Show Camera Guide
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
         
         {/* Start AR button if not active */}
         {arSupported && !arActive && (
