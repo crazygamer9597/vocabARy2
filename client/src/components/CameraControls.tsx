@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApp } from '@/contexts/AppContext';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 export default function CameraControls() {
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [availableCameras, setAvailableCameras] = useState<MediaDeviceInfo[]>([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
   // Get the app context
   const { 
     isCameraAccessDenied, 
@@ -22,7 +24,7 @@ export default function CameraControls() {
         setIsDropdownOpen(false);
       }
     }
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -68,27 +70,31 @@ export default function CameraControls() {
     try {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cameras = devices.filter(device => device.kind === 'videoinput');
-      
+
       console.log('Available cameras:', cameras.map(cam => cam.label || 'Unnamed camera'));
       setAvailableCameras(cameras);
-      
+
       // Try to use the camera ID from localStorage if available
       const savedCameraId = localStorage.getItem('selectedCameraId');
-      
+
       // If no camera is selected yet and we have cameras available, select one
       if (!selectedCameraId && cameras.length > 0) {
         // First try to use saved camera
         if (savedCameraId && cameras.some(cam => cam.deviceId === savedCameraId)) {
           setSelectedCameraId(savedCameraId);
         } else {
-          // By default, try to select the back camera (typically more useful for object detection)
-          const backCamera = cameras.find(camera => 
-            camera.label.toLowerCase().includes('back') || 
-            camera.label.toLowerCase().includes('rear'));
-          
-          if (backCamera) {
-            setSelectedCameraId(backCamera.deviceId);
+          // Try to find the best rear camera, avoiding wide-angle if possible
+          const rearCameras = cameras.filter(camera => 
+            (camera.label.toLowerCase().includes('back') || 
+             camera.label.toLowerCase().includes('rear')) &&
+            !camera.label.toLowerCase().includes('wide')
+          );
+
+          // If we have multiple rear cameras, prefer the non-wide one
+          if (rearCameras.length > 0) {
+            setSelectedCameraId(rearCameras[0].deviceId);
           } else if (cameras.length > 0) {
+            // Fallback to first available camera
             setSelectedCameraId(cameras[0].deviceId);
           }
         }
@@ -114,10 +120,36 @@ export default function CameraControls() {
   };
 
   // Switch camera
-  const switchCamera = (deviceId: string) => {
-    setSelectedCameraId(deviceId);
-    localStorage.setItem('selectedCameraId', deviceId);
-    setIsDropdownOpen(false);
+  const switchCamera = async (deviceId: string) => {
+    try {
+      // Stop current stream if it exists
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach(track => track.stop());
+      }
+
+      // Request access to the new camera
+      const newStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          deviceId: { exact: deviceId },
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      setSelectedCameraId(deviceId);
+      localStorage.setItem('selectedCameraId', deviceId);
+      setIsDropdownOpen(false);
+
+      // Update video stream
+      if (videoRef.current) {
+        videoRef.current.srcObject = newStream;
+        await videoRef.current.play();
+      }
+    } catch (error) {
+      console.error('Error switching camera:', error);
+      alert('Error switching camera. Please ensure camera permissions are granted.');
+    }
   };
 
   // Get camera name for display
@@ -147,12 +179,14 @@ export default function CameraControls() {
     );
   }
 
-  if (availableCameras.length <= 1) {
-    // If only one camera is available, don't show the controls
+  // Get mobile status first, before any conditional returns
+  const isMobile = useIsMobile();
+
+  // Don't render anything on mobile or if only one camera
+  if (isMobile || availableCameras.length <= 1) {
     return null;
   }
-
-  // Show camera dropdown for desktop
+  
   return (
     <div 
       ref={dropdownRef}
@@ -171,7 +205,7 @@ export default function CameraControls() {
         </span>
         <span className="material-icons ml-1">{isDropdownOpen ? 'expand_less' : 'expand_more'}</span>
       </button>
-      
+
       {/* Camera dropdown */}
       {isDropdownOpen && (
         <div className="absolute right-0 bottom-full mb-2 w-64 overflow-hidden bg-white dark:bg-gray-800 rounded-lg shadow-xl border border-gray-200 dark:border-gray-700">
@@ -203,7 +237,7 @@ export default function CameraControls() {
               </button>
             ))}
           </div>
-          
+
           {/* Quick switch button at bottom */}
           <div className="p-2 border-t border-gray-200 dark:border-gray-700">
             <button

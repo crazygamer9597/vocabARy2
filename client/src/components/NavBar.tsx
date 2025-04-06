@@ -20,14 +20,14 @@ export default function NavBar() {
       <div className="max-w-7xl mx-auto px-4 flex justify-between items-center h-14">
         <div className="flex items-center">
           <div className="flex items-center">
+            <div className="w-8 h-8 mr-5">
+              <AppIcon />
+            </div>
             <Link href="/">
               <h1 className="text-white font-bold text-lg cursor-pointer">
                 vocab<span className="text-primary-custom">AR</span>y
               </h1>
             </Link>
-            <div className="w-8 h-8 ml-3">
-              <AppIcon />
-            </div>
           </div>
           
           <nav className="ml-8">

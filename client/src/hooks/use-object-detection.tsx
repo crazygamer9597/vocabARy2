@@ -57,7 +57,8 @@ export function useObjectDetection(
           
           modelRef.current = model;
           setIsModelLoaded(true);
-          console.log('COCO-SSD model loaded successfully');
+          console.log('COCO-SSD model loaded and initialized successfully');
+          console.log('Model configuration:', modelConfig);
         }
       } catch (error) {
         console.error('Error loading object detection model:', error);
@@ -166,17 +167,22 @@ export function useObjectDetection(
   // Start detection
   const startObjectDetection = async () => {
     if (!videoRef.current) {
-      console.error('Video element not available for object detection');
+      console.error('Video element not available');
       return;
     }
     
-    if (!isModelLoaded || !modelRef.current) {
-      console.log('Waiting for model to load before starting detection');
-      setTimeout(startObjectDetection, 1000); // Retry in 1 second
+    if (isRunning) {
+      console.log('Detection already running');
       return;
     }
     
-    console.log('Starting object detection');
+    // Wait for model to be ready
+    while (!isModelLoaded || !modelRef.current) {
+      console.log('Waiting for model to load...');
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+    
+    console.log('Model ready - Starting object detection');
     setIsRunning(true);
     
     const detectObjects = async () => {
@@ -211,12 +217,17 @@ export function useObjectDetection(
         return;
       }
       
+      if (!modelRef.current || !isModelLoaded) {
+        console.log('Model not ready yet, waiting...');
+        return;
+      }
+
       try {
         const predictions = await modelRef.current.detect(videoRef.current);
         
         // Filter predictions with a confidence score > 0.6
         const highConfidencePredictions = predictions.filter(
-          prediction => prediction.score > 0.6
+          prediction => prediction.score > 0.45  // Lower threshold for better detection
         );
         
         if (highConfidencePredictions.length > 0) {

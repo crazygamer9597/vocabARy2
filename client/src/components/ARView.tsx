@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWebXR } from '@/hooks/use-webxr';
 import { useObjectDetection } from '@/hooks/use-object-detection';
+import * as THREE from 'three';
+import { ARButton } from 'three/examples/jsm/webxr/ARButton';
 import ObjectMarker from './detection/ObjectMarker';
 import WordCard from './detection/WordCard';
 import Confetti from './confetti/Confetti';
@@ -15,22 +17,33 @@ export default function ARView() {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
-  
+
   const [showConfetti, setShowConfetti] = useState(false);
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
   const [markedAsLearned, setMarkedAsLearned] = useState<Set<string>>(new Set());
   const [showTutorial, setShowTutorial] = useState(false);
   const [showTutorialOverlay, setShowTutorialOverlay] = useState(false);
-  
+
   const { 
     detectedObjects, 
     setDetectedObjects, 
     selectedCameraId,
     isCameraAccessDenied
   } = useApp();
-  
-  const { initAR, arSupported, arActive } = useWebXR(canvasRef);
-  const { startObjectDetection, stopObjectDetection } = useObjectDetection(
+
+  const { arActive, arSupported, initAR, scene, camera, renderer, addObject, createTextLabel } = useWebXR(canvasRef, {
+    onARSceneReady: (scene) => {
+      // Add ambient light
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+      scene.add(ambientLight);
+
+      // Add directional light
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+      directionalLight.position.set(0, 10, 5);
+      scene.add(directionalLight);
+    }
+  });
+  const { startObjectDetection, stopObjectDetection, isModelLoaded } = useObjectDetection(
     videoRef,
     (objects) => {
       // Filter out any objects that we've already detected
@@ -41,13 +54,13 @@ export default function ARView() {
           Math.abs(existing.boundingBox.y - obj.boundingBox.y) < 50
         )
       );
-      
+
       if (newDetections.length > 0) {
         setDetectedObjects([...detectedObjects, ...newDetections]);
       }
     }
   );
-  
+
   // Check if tutorial has been viewed before
   useEffect(() => {
     const tutorialViewed = localStorage.getItem('arTutorialViewed');
@@ -67,93 +80,140 @@ export default function ARView() {
           });
         }
       };
-      
+
       updateSize();
       window.addEventListener('resize', updateSize);
       return () => window.removeEventListener('resize', updateSize);
     }
   }, []);
-  
-  // Make sure object detection starts regardless of AR mode
+
+  // Start AR mode if supported after delay, otherwise fallback to camera mode
   useEffect(() => {
-    // We'll start object detection when:
-    // 1. AR is active (for AR mode)
-    // 2. OR WebXR is not supported but camera is available (for camera fallback mode)
-    if (arActive || (!arSupported && videoRef.current && videoRef.current.readyState >= 2 && !isCameraAccessDenied)) {
-      console.log('Starting object detection');
-      startObjectDetection();
-    }
-    
+    let currentStream: MediaStream | null = null;
+    let initAttempts = 0;
+    const maxAttempts = 3;
+    let isInitializing = false;
+
+    const initializeCamera = async () => {
+      if (isInitializing) return;
+      isInitializing = true;
+      if (!videoRef.current || isCameraAccessDenied) return;
+
+      try {
+        // Only initialize if we need to change cameras or don't have a stream
+        if (currentStream?.active) {
+          const currentTrack = currentStream.getVideoTracks()[0];
+          if (currentTrack?.readyState === 'live' && 
+              currentTrack.getSettings().deviceId === selectedCameraId) {
+            return;
+          }
+        }
+
+        // Stop any ongoing play attempts
+        if (videoRef.current.srcObject) {
+          const oldStream = videoRef.current.srcObject as MediaStream;
+          oldStream.getTracks().forEach(track => track.stop());
+          videoRef.current.srcObject = null;
+          // Wait for the old stream to fully stop
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+
+        const isMobile = window.innerWidth < 768;
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            deviceId: !isMobile && selectedCameraId ? { exact: selectedCameraId } : undefined,
+            facingMode: isMobile ? 'environment' : (!selectedCameraId ? 'environment' : undefined),
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        });
+
+        if (!videoRef.current) return;
+        
+        // Set up video element before attaching stream
+        videoRef.current.autoplay = true;
+        videoRef.current.playsInline = true;
+        videoRef.current.muted = true;
+        
+        // Attach stream and wait for loadedmetadata
+        videoRef.current.srcObject = stream;
+        currentStream = stream;
+        
+        await new Promise((resolve) => {
+          if (!videoRef.current) return;
+          videoRef.current.onloadedmetadata = resolve;
+        });
+        
+        // Now try to play
+        try {
+          await videoRef.current.play();
+          console.log('Camera initialized successfully - waiting for model before starting detection');
+          await startObjectDetection();
+          initAttempts = 0;
+        } catch (playError) {
+          console.error('Error playing video:', playError);
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          // Don't throw, just log the error
+          console.warn('Play request failed, will retry:', playError);
+        }
+
+      } catch (error) {
+        console.error('Error accessing camera:', error);
+        initAttempts++;
+
+        if (initAttempts < maxAttempts) {
+          setTimeout(initializeCamera, 1000);
+        }
+      }
+    };
+
+    initializeCamera();
+
     return () => {
       stopObjectDetection();
-    };
-  }, [arActive, arSupported, startObjectDetection, stopObjectDetection, isCameraAccessDenied]);
-  
-  // Initialize camera on load and when the selected camera changes
-  useEffect(() => {
-    // Initialize camera if not in AR mode and not denied access
-    if (videoRef.current && !arActive && !isCameraAccessDenied) {
-      console.log('Initializing camera feed');
-      
-      // Stop any existing video stream
-      if (videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
-        stream.getTracks().forEach(track => track.stop());
+      if (currentStream) {
+        currentStream.getTracks().forEach(track => track.stop());
       }
-      
-      // Start a new video stream with the selected camera
-      navigator.mediaDevices.getUserMedia({
-        video: {
-          deviceId: selectedCameraId ? { exact: selectedCameraId } : undefined,
-          facingMode: !selectedCameraId ? 'environment' : undefined,
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
-        }
-      })
-      .then(stream => {
-        console.log('Camera access granted, starting video stream');
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          // Start object detection once video starts
-          videoRef.current.onloadedmetadata = () => {
-            videoRef.current?.play();
-            startObjectDetection();
-          };
-        }
-      })
-      .catch(error => {
-        console.error('Error accessing camera:', error);
-        alert('Error accessing camera. Please ensure camera permissions are granted.');
-      });
-    }
-  }, [selectedCameraId, arActive, isCameraAccessDenied, startObjectDetection]);
-  
+    };
+  }, [selectedCameraId, arSupported, arActive, isCameraAccessDenied, initAR, startObjectDetection, stopObjectDetection]);
+
   // Trigger confetti animation
   const triggerConfetti = () => {
     setShowConfetti(true);
     setTimeout(() => setShowConfetti(false), 3000);
   };
-  
+
   const handleMarkAsLearned = (objectName: string) => {
     if (!markedAsLearned.has(objectName)) {
       triggerConfetti();
       setMarkedAsLearned(prev => new Set(prev).add(objectName));
     }
   };
-  
+
   return (
     <div className="flex flex-col h-screen bg-black">
       <NavBar />
-      
+
       {/* AR Tutorial Overlay */}
       {showTutorial && <ARTutorial />}
-      
+
       <div 
         id="ar-view" 
         ref={containerRef} 
         className="relative flex-1 overflow-hidden bg-black"
         style={{ marginTop: '56px', marginBottom: '32px' }}
       >
+        {/* Loading spinner overlay */}
+        {!isModelLoaded && (
+          <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-70 z-50">
+            <div className="text-center">
+              <div className="w-16 h-16 border-4 border-primary-custom border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p className="text-white text-sm">Initializing AI Model...</p>
+            </div>
+          </div>
+        )}
         {!arSupported && (
           <div className="absolute top-0 left-0 bg-black bg-opacity-70 p-2 rounded-br-lg text-white z-10 text-xs max-w-[200px]">
             <div className="flex items-center">
@@ -162,7 +222,7 @@ export default function ARView() {
             </div>
           </div>
         )}
-        
+
         {/* Show message when camera access is denied */}
         {isCameraAccessDenied && (
           <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-b from-gray-800 to-gray-900 z-50">
@@ -181,44 +241,86 @@ export default function ARView() {
             </div>
           </div>
         )}
-        
+
         {/* Either WebXR canvas or fallback video will be displayed */}
-        <canvas ref={canvasRef} className="absolute inset-0 w-full h-full"></canvas>
+        <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full ${!arActive ? 'hidden' : ''}`}></canvas>
         <video 
           ref={videoRef} 
-          className={`absolute inset-0 w-full h-full object-cover ${arActive ? 'hidden' : ''}`}
+          className="absolute inset-0 w-full h-full object-cover"
           playsInline
           autoPlay={true}
           muted={true}
-          style={{ transform: 'scaleX(-1)' }} /* Mirror video for selfie mode */
+          style={{ 
+            display: arActive ? 'none' : 'block'
+          }}
         ></video>
-        
-        {/* Object markers and word cards */}
-        {detectedObjects.map((object, index) => (
-          <ObjectMarker 
-            key={`${object.name}-${index}`}
-            position={{ x: object.boundingBox.x, y: object.boundingBox.y }}
-            containerSize={containerSize}
-          >
+
+        {/* AR Word cards */}
+        {arActive && detectedObjects.slice(-3).map((object, index) => {
+          // Calculate AR position based on detection
+          const position = new THREE.Vector3(
+            object.boundingBox.x - 0.5,
+            object.boundingBox.y - 0.5,
+            -1 // 1 meter in front
+          );
+
+          // Create text mesh for word card
+          const wordCardMesh = createWordCardMesh(
+            object,
+            position,
+            markedAsLearned.has(object.name),
+            () => handleMarkAsLearned(object.name)
+          );
+
+          if (wordCardMesh && scene) {
+            scene.add(wordCardMesh);
+          }
+
+          // Add confetti effect in AR if word is learned
+          if (showConfetti && scene) {
+            createARConfetti(scene, position);
+          }
+
+          return null;
+        })}
+
+        {/* Camera mode word cards */}
+        {!arActive && detectedObjects.slice(-3).map((object, index) => (
+          <div key={`${object.name}-${index}`}>
+            <div 
+              className="absolute border-2 border-primary-custom"
+              style={{
+                left: `${object.boundingBox.x * containerSize.width}px`,
+                top: `${object.boundingBox.y * containerSize.height}px`,
+                width: `${object.boundingBox.width * containerSize.width}px`,
+                height: `${object.boundingBox.height * containerSize.height}px`
+              }}
+            />
+            <ObjectMarker 
+              key={`${object.name}-${index}`}
+              position={{ x: object.boundingBox.x, y: object.boundingBox.y }}
+              containerSize={containerSize}
+            >
             <WordCard 
               object={object}
               onMarkAsLearned={() => handleMarkAsLearned(object.name)}
               isLearned={markedAsLearned.has(object.name)}
             />
           </ObjectMarker>
+          </div>
         ))}
-        
+
         {/* Confetti effect */}
         {showConfetti && <Confetti />}
-        
+
         {/* Camera controls */}
         <CameraControls />
-        
+
         {/* In-camera Tutorial Overlay */}
         {showTutorialOverlay && (
           <TutorialOverlay onClose={() => setShowTutorialOverlay(false)} />
         )}
-        
+
         {/* Help button with dropdown menu */}
         <div className="absolute top-20 right-4 z-20">
           <div className="relative group">
@@ -228,7 +330,7 @@ export default function ARView() {
             >
               <span className="material-icons">help_outline</span>
             </button>
-            
+
             {/* Dropdown menu */}
             <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-gray-900 bg-opacity-95 ring-1 ring-black ring-opacity-5 invisible group-hover:visible transition-all duration-200 origin-top-right">
               <div className="py-1" role="menu" aria-orientation="vertical">
@@ -252,19 +354,10 @@ export default function ARView() {
             </div>
           </div>
         </div>
-        
-        {/* Start AR button if not active */}
-        {arSupported && !arActive && (
-          <button 
-            onClick={initAR}
-            className="absolute bottom-24 left-1/2 transform -translate-x-1/2 text-white py-3 px-6 rounded-xl font-medium transition-colors"
-            style={{ background: 'linear-gradient(90deg, #8F87F1, #C68EFD)' }}
-          >
-            Start AR Experience
-          </button>
-        )}
+
+        {/* AR initialization is now handled through the onboarding flow */}
       </div>
-      
+
       <Footer />
     </div>
   );

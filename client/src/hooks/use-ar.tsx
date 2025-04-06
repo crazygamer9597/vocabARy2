@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import * as THREE from 'three';
+import { ARButton } from 'three/examples/jsm/webxr/ARButton.js';
 
 interface UseAROptions {
   onARSceneReady?: (scene: THREE.Scene) => void;
@@ -26,11 +27,18 @@ export function useAR({ onARSceneReady }: UseAROptions = {}) {
     camera.position.z = 5;
     cameraRef.current = camera;
     
-    // Create renderer
-    const renderer = new THREE.WebGLRenderer({ alpha: true });
+    // Create renderer with XR support
+    const renderer = new THREE.WebGLRenderer({ 
+      alpha: true,
+      antialias: true
+    });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.xr.enabled = true;
     rendererRef.current = renderer;
+
+    // Add AR button
+    document.body.appendChild(ARButton.createButton(renderer));
     
     // Add lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);

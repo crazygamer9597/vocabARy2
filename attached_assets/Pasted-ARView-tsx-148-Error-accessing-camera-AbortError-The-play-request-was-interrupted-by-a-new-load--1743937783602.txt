@@ -1,0 +1,20 @@
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:136 Camera initialized successfully
+use-object-detection.tsx:179 Starting object detection
+3
+use-object-detection.tsx:174 Waiting for model to load before starting detection
+ARView.tsx:140 Error playing video: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:140 Error playing video: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:140 Error playing video: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:140 Error playing video: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:140 Error playing video: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:140 Error playing video: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:148 Error accessing camera: AbortError: The play() request was interrupted by a new load request. https://goo.gl/LdLk22
+ARView.tsx:136 Camera initialized successfully
+use-object-detection.tsx:179 Starting object detection
+use-object-detection.tsx:184 Detection stopped
