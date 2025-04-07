@@ -4,7 +4,7 @@ export default function Footer() {
       <div className="flex items-center justify-center">
         <span>Made with </span>
         <span className="text-red-500 mx-1">❤</span>
-        <span>by team nihal</span>
+        <span>by Saran, Shreeja, Manish, Nihal</span>
       </div>
     </footer>
   );

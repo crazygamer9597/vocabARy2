@@ -56,7 +56,19 @@ export default function ARView() {
       );
 
       if (newDetections.length > 0) {
-        setDetectedObjects([...detectedObjects, ...newDetections]);
+        // Add new detections and automatically show their word cards
+        const detections = [...detectedObjects, ...newDetections];
+        setDetectedObjects(detections);
+        
+        // Show latest 3 detections
+        const latestDetections = detections.slice(-3);
+        console.log('Showing word cards for:', latestDetections.map(d => d.name));
+        
+        // Trigger confetti for new detections
+        if (newDetections.length > 0) {
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+        }
       }
     }
   );
@@ -91,64 +103,183 @@ export default function ARView() {
   useEffect(() => {
     let currentStream: MediaStream | null = null;
     let initAttempts = 0;
-    const maxAttempts = 3;
+    const maxAttempts = 5; // Increase max attempts
     let isInitializing = false;
 
-    const initializeCamera = async () => {
-      if (isInitializing) return;
-      isInitializing = true;
-      if (!videoRef.current || isCameraAccessDenied) return;
+    // Create an event handler for the startObjectDetection event
+    const handleStartObjectDetection = () => {
+      console.log('Received startObjectDetection event');
+      if (!isInitializing && videoRef.current) {
+        initializeCamera(true); // Force initialization
+      }
+    };
 
+    // Add event listener for custom event
+    window.addEventListener('startObjectDetection', handleStartObjectDetection);
+
+    const initializeCamera = async (forceStart = false) => {
+      if (isInitializing && !forceStart) return;
+      isInitializing = true;
+      
+      console.log('Initializing camera (force:', forceStart, ')');
+      
       try {
+        // Check if camera is accessible
+        if (!videoRef.current) {
+          console.log('Video element not accessible');
+          isInitializing = false;
+          return;
+        }
+
+        // If camera access was previously denied, show error
+        if (isCameraAccessDenied && !forceStart) {
+          console.log('Camera permission previously denied');
+          isInitializing = false;
+          return;
+        }
+
+        console.log('Initializing camera with selected camera ID:', selectedCameraId);
+        
         // Only initialize if we need to change cameras or don't have a stream
-        if (currentStream?.active) {
+        if (!forceStart && currentStream?.active) {
           const currentTrack = currentStream.getVideoTracks()[0];
           if (currentTrack?.readyState === 'live' && 
               currentTrack.getSettings().deviceId === selectedCameraId) {
+            console.log('Camera already initialized with the correct device, starting detection');
+            await startObjectDetection();
+            isInitializing = false;
             return;
           }
         }
 
         // Stop any ongoing play attempts
         if (videoRef.current.srcObject) {
+          console.log('Stopping previous video stream');
           const oldStream = videoRef.current.srcObject as MediaStream;
           oldStream.getTracks().forEach(track => track.stop());
           videoRef.current.srcObject = null;
           // Wait for the old stream to fully stop
-          await new Promise(resolve => setTimeout(resolve, 100));
+          await new Promise(resolve => setTimeout(resolve, 300));
         }
 
         const isMobile = window.innerWidth < 768;
+        console.log('Getting user media for camera', { isMobile, selectedCameraId });
+        
+        // First request permission explicitly with a simpler constraint
+        try {
+          console.log('Requesting basic camera permission first');
+          const testStream = await navigator.mediaDevices.getUserMedia({ 
+            video: true,
+            audio: false
+          });
+          // If successful, stop the test stream
+          testStream.getTracks().forEach(track => track.stop());
+          console.log('Basic camera permission granted');
+        } catch (permError) {
+          console.error('Error requesting basic camera permission:', permError);
+          // Don't return here, still try the main camera request
+        }
+        
+        // Now request with desired constraints
         const stream = await navigator.mediaDevices.getUserMedia({
           video: {
             deviceId: !isMobile && selectedCameraId ? { exact: selectedCameraId } : undefined,
             facingMode: isMobile ? 'environment' : (!selectedCameraId ? 'environment' : undefined),
             width: { ideal: 1280 },
             height: { ideal: 720 }
-          }
+          },
+          audio: false
         });
 
-        if (!videoRef.current) return;
-        
+        if (!videoRef.current) {
+          console.log('Video element no longer available');
+          if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+          }
+          isInitializing = false;
+          return;
+        }
+
         // Set up video element before attaching stream
         videoRef.current.autoplay = true;
         videoRef.current.playsInline = true;
         videoRef.current.muted = true;
+
+        // Prepare video element before attaching stream
+        console.log('Attaching video stream to video element');
+        videoRef.current.srcObject = null; // Clear any existing stream first
         
-        // Attach stream and wait for loadedmetadata
+        // Set properties before assigning srcObject
+        videoRef.current.autoplay = true;
+        videoRef.current.playsInline = true;
+        videoRef.current.muted = true;
+        videoRef.current.setAttribute('playsinline', ''); // Important for iOS
+        
+        // Now attach the stream
         videoRef.current.srcObject = stream;
         currentStream = stream;
-        
-        await new Promise((resolve) => {
-          if (!videoRef.current) return;
-          videoRef.current.onloadedmetadata = resolve;
-        });
-        
-        // Now try to play
+
+        // Wait for video metadata with a timeout
+        await Promise.race([
+          new Promise<void>((resolve) => {
+            if (!videoRef.current) {
+              resolve();
+              return;
+            }
+            
+            const handleMetadata = () => {
+              videoRef.current?.removeEventListener('loadedmetadata', handleMetadata);
+              resolve();
+            };
+            
+            videoRef.current.addEventListener('loadedmetadata', handleMetadata);
+            
+            // If metadata is already loaded, resolve immediately
+            if (videoRef.current.readyState >= 2) {
+              resolve();
+            }
+          }),
+          new Promise<void>((resolve) => setTimeout(resolve, 3000)) // 3 second timeout - increased for reliability
+        ]);
+
+        // Now try to play - with a more reliable approach
         try {
-          await videoRef.current.play();
-          console.log('Camera initialized successfully - waiting for model before starting detection');
-          await startObjectDetection();
+          console.log('Attempting to play video');
+          const playPromise = videoRef.current.play();
+          
+          // Handle play promise properly
+          if (playPromise !== undefined) {
+            await playPromise;
+            console.log('Camera initialized successfully - starting object detection');
+          } else {
+            console.log('Play promise undefined, continuing anyway');
+          }
+          
+          // Wait longer to let video stabilize completely
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Ensure the model is loaded before starting detection
+          if (isModelLoaded) {
+            console.log('Model already loaded, starting detection immediately');
+            await startObjectDetection();
+          } else {
+            console.log('Waiting for model to load before starting detection');
+            // Wait for the model to load with a timeout
+            let waitTime = 0;
+            const checkInterval = setInterval(async () => {
+              waitTime += 500;
+              if (isModelLoaded) {
+                clearInterval(checkInterval);
+                console.log('Model loaded, starting detection');
+                await startObjectDetection();
+              } else if (waitTime > 10000) { // 10 second timeout
+                clearInterval(checkInterval);
+                console.warn('Model load timeout, attempting to start detection anyway');
+                await startObjectDetection();
+              }
+            }, 500);
+          }
+          
           initAttempts = 0;
         } catch (playError) {
           console.error('Error playing video:', playError);
@@ -157,6 +288,16 @@ export default function ARView() {
           }
           // Don't throw, just log the error
           console.warn('Play request failed, will retry:', playError);
+          
+          // Allow retry after a delay
+          setTimeout(() => {
+            isInitializing = false;
+            if (initAttempts < maxAttempts) {
+              initAttempts++;
+              initializeCamera();
+            }
+          }, 1000);
+          return;
         }
 
       } catch (error) {
@@ -164,20 +305,32 @@ export default function ARView() {
         initAttempts++;
 
         if (initAttempts < maxAttempts) {
-          setTimeout(initializeCamera, 1000);
+          setTimeout(() => {
+            isInitializing = false;
+            initializeCamera();
+          }, 1000);
+          return;
         }
       }
+      
+      isInitializing = false;
     };
 
-    initializeCamera();
+    // Wait a moment before initializing to ensure all hooks are set up
+    const initTimer = setTimeout(() => {
+      initializeCamera();
+    }, 500);
 
     return () => {
+      clearTimeout(initTimer);
+      window.removeEventListener('startObjectDetection', handleStartObjectDetection);
+      console.log('Cleaning up camera and detection');
       stopObjectDetection();
       if (currentStream) {
         currentStream.getTracks().forEach(track => track.stop());
       }
     };
-  }, [selectedCameraId, arSupported, arActive, isCameraAccessDenied, initAR, startObjectDetection, stopObjectDetection]);
+  }, [selectedCameraId, arSupported, arActive, isCameraAccessDenied, initAR, startObjectDetection, stopObjectDetection, isModelLoaded]);
 
   // Trigger confetti animation
   const triggerConfetti = () => {
@@ -214,7 +367,7 @@ export default function ARView() {
             </div>
           </div>
         )}
-        {!arSupported && (
+        {!arSupported && isModelLoaded && (
           <div className="absolute top-0 left-0 bg-black bg-opacity-70 p-2 rounded-br-lg text-white z-10 text-xs max-w-[200px]">
             <div className="flex items-center">
               <span className="material-icons text-yellow-500 mr-1 text-sm">warning</span>
@@ -287,21 +440,17 @@ export default function ARView() {
         {/* Camera mode word cards */}
         {!arActive && detectedObjects.slice(-3).map((object, index) => (
           <div key={`${object.name}-${index}`}>
-            <div 
-              className="absolute border-2 border-primary-custom"
-              style={{
-                left: `${object.boundingBox.x * containerSize.width}px`,
-                top: `${object.boundingBox.y * containerSize.height}px`,
-                width: `${object.boundingBox.width * containerSize.width}px`,
-                height: `${object.boundingBox.height * containerSize.height}px`
-              }}
-            />
             <ObjectMarker 
               key={`${object.name}-${index}`}
-              position={{ x: object.boundingBox.x, y: object.boundingBox.y }}
+              position={{ 
+                x: object.boundingBox.x + (object.boundingBox.width / 2), 
+                y: object.boundingBox.y + (object.boundingBox.height / 2),
+                width: object.boundingBox.width,
+                height: object.boundingBox.height
+              }}
               containerSize={containerSize}
             >
-            <WordCard 
+              <WordCard 
               object={object}
               onMarkAsLearned={() => handleMarkAsLearned(object.name)}
               isLearned={markedAsLearned.has(object.name)}
